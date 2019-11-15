@@ -2,27 +2,46 @@
 #1.获取Android源码的根目录
 function gettop
 {
-	local TOPFILE=build/core/envsetup.mk
-	if [ -n "$TOP" -a -f "$TOP/TOPFILE" ] ; then
-		echo $TOP
-	else
-		if [ -f $TOPFILE ] ; then
-			PWD= /bin/pwd
-		else
-			local HERE=$PWD
-			T=
-			while [ \( ! \( -f $TOPFILE \) \) -a \( $PWD != "/" \) ] ; do
-				cd .. > /dev/null
-				T=`PWD= /bin/pwd`
-				#echo "T_PATH = ${T}"
-			done
-			cd $HERE > /dev/null
-			if [ -f "$T/TOPFILE" ] ; then
-				echo $T
-			fi
-		fi
-	fi
-	#echo "TOP_PATH = ${T}"
+    local TOPFILE=build/core/envsetup.mk
+    # 如果编译环境已经设置了$TOP，就检查$TOP/build/core/envsetup.mk文件是否存在
+    if [ -n "$TOP" -a -f "$TOP/$TOPFILE" ] ; then
+        # The following circumlocution ensures we remove symlinks from TOP.
+        # 转到$TOP目录，通过命令`/bin/pwd`将$TOP目录指向的真实路径存放到PWD中
+        #echo "转到\$TOP目录，通过命令将\$TOP目录指向的真实路径存放到PWD中"
+        (cd $TOP; PWD= /bin/pwd)
+    else
+        # 如果当前路径下能够找到build/core/envsetup.mk文件，
+        # 则将当前目录的真实路径存放到PWD中
+        if [ -f $TOPFILE ] ; then
+        	echo "将当前目录的真实路径存放到PWD中,直接打印"
+            PWD= /bin/pwd
+            #echo "PWD=${PWD}"
+        else
+            # 如果当前目录下无法找到build/core/envsetup.mk文件，
+            # 则不断返回到外层目录查找，直到到达根目录/为止
+
+            # 保存查找操作前的路径
+            #echo "保存查找操作前的路径"
+            #echo "PWD=${PWD}"
+            local HERE=$PWD
+            T=
+            while [ \( ! \( -f $TOPFILE \) \) -a \( $PWD != "/" \) ]; do
+                # 转到外层目录
+                \cd ..
+                # 将当前路径保存到T中
+                T=`PWD= /bin/pwd -P`
+                #echo "T=${T}"
+            done
+            # 查找完后恢复操作前的路径
+            \cd $HERE
+            # 如果目录T包含build/core/envsetup.mk，说明是T是编译的根目录
+            if [ -f "$T/$TOPFILE" ]; then
+                # 输出$T中保存的路径作为gettop的返回值
+                #echo "输出\$T中保存的路径作为gettop的返回值"
+                echo $T
+            fi
+        fi
+    fi
 }
 
 #获取Android源码的根目录
@@ -30,10 +49,12 @@ gettop
 
 #2.获取envsetup.sh里面的以function开头的函数，并将函数名打印出来
 function hmm() {
+	#查找编译环境根目录
     local T=$(gettop)
     echo "${T}"
     local A=""
     local i
+    #读取build/envsetup.sh文件，并通过sed操作获取其中定义的函数，并进行排序输出，存放到变量$A中
     for i in `cat $T/build/envsetup.sh | sed -n "/^[[:blank:]]*function /s/function \([a-z_]*\).*/\1/p" | sort | uniq`; do
       A="$A $i"
     done
@@ -79,6 +100,7 @@ function hmm() {
 #ONE_SHOT_MAKEFILE="MAKEFILE" make -C $T $DASH_ARGS all_modules $ARGS
 #相当于：make -C /home/admin/android -B all_modules    ONE_SHOT_MAKEFILE=frameworks/base/Android.mk
 
+#3.编译子模块
 function mmm()
 {
     local T=$(gettop)
@@ -140,7 +162,8 @@ function mmm()
         fi
 
         #正真执行编译
-        ONE_SHOT_MAKEFILE="$MAKEFILE" $DRV make -C $T -f build/core/main.mk $DASH_ARGS $MODULES $ARGS
+        echo "正真执行编译"
+        #ONE_SHOT_MAKEFILE="$MAKEFILE" $DRV make -C $T -f build/core/main.mk $DASH_ARGS $MODULES $ARGS
     else
         echo "Couldn't locate the top of the tree.  Try setting TOP."
     fi
@@ -148,3 +171,53 @@ function mmm()
 
 #3.调用mmm编译子模块,在当前工程目录下执行
 #mmm -B "packages\apps\DeskClock"
+
+#4.查看有多少个function函数
+#sed -n "/^[ \t]*function/ s/function \([a-zA-Z0-9_]\w*\).*/\1/p" < build/envsetup.sh |wc -l
+#sed -n "/^[[:blank:]]*function /s/function \([a-z_]\w*\).*/\1/p" < build/envsetup.sh | wc -l
+#sed -n "s/^[ \t]*function \([a-zA-Z0-9_]\w*\).*/\1/p" < build/envsetup.sh |wc -l
+
+
+#4.croot命令切换到当前编译环境的根目录
+function croot()
+{
+	#查找当前编译树的根目录
+	T=$(gettop)
+	if [ "$T" ]; then
+		#切换到编译环境的根目录
+		echo "切换到编译环境的根目录"
+		\cd $(gettop)
+	else
+		echo "Couldn't locate the top of the tree.  Try setting TOP."
+	fi
+}
+
+
+#5.cproj命令用于切换到当前模块的编译目录下（含有Android.mk）
+function cproj()
+{
+    TOPFILE=build/core/envsetup.mk
+    # 保存操作前的路径
+    local HERE=$PWD
+    echo "HERE=${HERE}"
+    T=
+    # 当前目录下build/core/envsetup.mk不存在（即当前目录不是编译根目录），
+    # 并且当前目录不是系统根目录
+    while [ \( ! \( -f $TOPFILE \) \) -a \( $PWD != "/" \) ] ; do
+    	T=$PWD
+    	# 当前$T目录下存在文件Android.mk
+        echo "T=${T}"
+   		if [ -f "$T/Android.mk" ]; then
+   			# 转到$T目录	
+   			\cd $T
+   			return
+   		fi
+   		# 转到外层目录
+   		\cd ..
+    done
+
+    # 恢复操作前的路径
+    \cd $HERE
+    echo "can't find Android.mk"
+}
+
