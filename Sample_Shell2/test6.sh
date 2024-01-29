@@ -1,11 +1,21 @@
 #!/bin/bash
-sum()							#定义函数
-{
-SUM=`expr $1 + $2` 				#求和
-echo $SUM						#输出计算结果
-}
-echo -n "请输入两个数字："
-read X Y							#读入操作数
-echo -n "$X + $Y = "
-sum $X $Y						#调用函数
 
+# 从键盘读取一个输入字符
+echo -n "请输入一个A～C之间的字符:"
+read IN
+
+# case语句
+case $IN in
+    A)
+        echo "输入的是A"
+    ;;
+    B)
+        echo "输入的是B"
+    ;;
+    C)
+        echo "输入的是C"
+    ;;
+    *)
+        echo "输入的是其他字符，$IN"
+    ;;
+esac

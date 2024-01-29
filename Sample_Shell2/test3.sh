@@ -1,16 +1,29 @@
 #!/bin/bash
-echo "脚本名称		: $0"					#输出脚本名称
-echo "第1个命令行参数: $1"					#输出第1个命令行参数
-echo "第2个命令行参数: $2"					#输出第2个命令行参数
-echo "第3个命令行参数: $3"					#输出第3个命令行参数
-echo "第4个命令行参数: $4"					#输出第4个命令行参数
-echo "第5个命令行参数: $5"					#输出第5个命令行参数
-echo "第6个命令行参数: $6"					#输出第6个命令行参数
-echo "第7个命令行参数: $7"					#输出第7个命令行参数
-echo "第8个命令行参数: $8"					#输出第8个命令行参数
-echo "第9个命令行参数: $9"					#输出第9个命令行参数
-echo "所有的命令行参数: $*"					#输出所有的命令行参数
-echo "命令行参数的个数: $#"					#输出命令行参数的个数
-echo "PID : $$"								#输出当前进程的标识符
-echo "error : $?"							#输出命令的退出状态
 
+# 遍历列表
+for apple in 苹果 香蕉 西瓜
+do 
+	echo $apple
+done 
+
+echo "==============================================="
+
+# 定义列表
+PARAMS=(function macro cmake_parse_arguments \
+		find_library find_path find_file find_program find_package \
+		cmake_policy cmake_minimum_required project include \
+		string list set foreach message option if while return \
+		math file configure_file \
+		include_directories add_executable add_library link_libraries target_link_libraries install \
+		target_sources add_custom_command add_custom_target \
+		add_subdirectory aux_source_directory \
+		set_property set_target_properties define_property \
+		add_definitions target_compile_definitions target_compile_features \
+		add_compile_options target_include_directories link_directories \
+		add_link_options target_precompile_headers)
+
+# 遍历列表
+for param in ${PARAMS[@]}; 
+do
+	echo "${param}"
+done
